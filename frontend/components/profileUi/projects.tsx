@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,110 +11,193 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import FileUpload from "./file-upload"
+// import FileUpload from "./file-upload"
+
+// Import your custom AuthProvider hook
+import { useAuth } from "@/auth/AuthProvider"
 
 interface Project {
   id: string
   name: string
   type: string
-  startDate: string
-  endDate?: string
+  startDate: string        // "YYYY-MM" in local state
+  endDate?: string         // "YYYY-MM" in local state
   ongoing: boolean
   description?: string
   technologies?: string[]
   repoUrl?: string
   demoUrl?: string
-  file?: File
+  // file?: File
 }
 
 export default function ProjectsTab() {
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: "1",
-      name: "E-commerce Platform",
-      type: "Web Application",
-      startDate: "2023-01",
-      endDate: "2023-04",
-      ongoing: false,
-      description:
-        "Built a full-stack e-commerce platform with React, Node.js, and MongoDB. Implemented user authentication, product catalog, shopping cart, and payment processing.",
-      technologies: ["React", "Node.js", "MongoDB", "Express", "Stripe"],
-      repoUrl: "https://github.com/username/ecommerce-platform",
-      demoUrl: "https://ecommerce-demo.example.com",
-    },
-    {
-      id: "2",
-      name: "AI Image Generator",
-      type: "Machine Learning",
-      startDate: "2023-06",
-      ongoing: true,
-      description:
-        "Developing an AI-powered image generation tool using Python and TensorFlow. Implementing various GAN architectures for high-quality image synthesis.",
-      technologies: ["Python", "TensorFlow", "PyTorch", "GANs"],
-      repoUrl: "https://github.com/username/ai-image-generator",
-    },
-  ])
+  const { supabase, user } = useAuth()
 
+  // ----------------------------------------------------------------
+  // State
+  // ----------------------------------------------------------------
+  const [projects, setProjects] = useState<Project[]>([])
   const [newProject, setNewProject] = useState<Partial<Project>>({
     ongoing: false,
     technologies: [],
   })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isChecked, setIsChecked] = useState(false)
+  const [isChecked, setIsChecked] = useState(false)  // For "ongoing" checkbox
   const [techInput, setTechInput] = useState("")
 
-  const handleAddProject = () => {
+  // ----------------------------------------------------------------
+  // Fetch projects from Supabase on mount
+  // ----------------------------------------------------------------
+  useEffect(() => {
+    if (!user) return
+
+    const fetchProjects = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("user_id", user.id)
+
+      if (error) {
+        console.error("❌ Error fetching projects:", error.message)
+      } else if (data) {
+        // Map DB fields to our local Project interface
+        const mapped = data.map((proj) => ({
+          id: proj.id,
+          name: proj.title,
+          type: proj.subtitle ?? "",
+          // Convert "YYYY-MM-DD" → "YYYY-MM"
+          startDate: proj.start_date ? proj.start_date.slice(0, 7) : "",
+          endDate: proj.end_date ? proj.end_date.slice(0, 7) : "",
+          ongoing: proj.end_date == null, // if end_date is null => ongoing
+          description: proj.description ?? "",
+          technologies: proj.tags ?? [],
+          repoUrl: proj.repo_url ?? "",
+          demoUrl: proj.live_url ?? "",
+          // file: undefined,
+        }))
+        setProjects(mapped)
+      }
+    }
+
+    fetchProjects()
+  }, [user, supabase])
+
+  // ----------------------------------------------------------------
+  // Insert a new project into Supabase
+  // ----------------------------------------------------------------
+  const handleAddProject = async () => {
+    if (!user) return
+
     if (newProject.name && newProject.type && newProject.startDate) {
-      setProjects([
-        ...projects,
-        {
-          id: Date.now().toString(),
-          name: newProject.name,
-          type: newProject.type,
-          startDate: newProject.startDate,
-          endDate: newProject.ongoing ? undefined : newProject.endDate,
-          ongoing: newProject.ongoing || false,
-          description: newProject.description,
-          technologies: newProject.technologies || [],
-          repoUrl: newProject.repoUrl,
-          demoUrl: newProject.demoUrl,
-          file: newProject.file,
-        },
-      ])
-      setNewProject({ ongoing: false, technologies: [] })
-      setTechInput("")
-      setIsDialogOpen(false)
+      // Convert "YYYY-MM" to "YYYY-MM-01" for date columns
+      const startDateForDB = newProject.startDate
+        ? `${newProject.startDate}-01`
+        : null
+
+      let endDateForDB = null
+      if (!newProject.ongoing && newProject.endDate) {
+        endDateForDB = `${newProject.endDate}-01`
+      }
+
+      const tagsForDB = newProject.technologies || []
+
+      const insertObj = {
+        user_id: user.id,
+        title: newProject.name,
+        subtitle: newProject.type,
+        start_date: startDateForDB,
+        end_date: endDateForDB,
+        description: newProject.description || null,
+        tags: tagsForDB.length > 0 ? tagsForDB : [],
+        repo_url: newProject.repoUrl || null,
+        live_url: newProject.demoUrl || null,
+      }
+
+      const { data, error } = await supabase
+        .from("projects")
+        .insert(insertObj)
+        .select()
+        .single()
+
+      if (error) {
+        console.error("❌ Error inserting project:", error.message)
+      } else if (data) {
+        // Update local state
+        setProjects([
+          ...projects,
+          {
+            id: data.id,
+            name: data.title,
+            type: data.subtitle ?? "",
+            startDate: data.start_date ? data.start_date.slice(0, 7) : "",
+            endDate: data.end_date ? data.end_date.slice(0, 7) : "",
+            ongoing: data.end_date == null,
+            description: data.description ?? "",
+            technologies: data.tags ?? [],
+            repoUrl: data.repo_url ?? "",
+            demoUrl: data.live_url ?? "",
+            // file: undefined,
+          },
+        ])
+        // Reset form
+        setNewProject({ ongoing: false, technologies: [] })
+        setTechInput("")
+        setIsChecked(false)
+        setIsDialogOpen(false)
+      }
     }
   }
 
-  const handleDeleteProject = (id: string) => {
-    setProjects(projects.filter((proj) => proj.id !== id))
+  // ----------------------------------------------------------------
+  // Delete a project
+  // ----------------------------------------------------------------
+  const handleDeleteProject = async (id: string) => {
+    if (!user) return
+
+    const { error } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", id)
+
+    if (error) {
+      console.error("❌ Error deleting project:", error.message)
+    } else {
+      // Remove from local state
+      setProjects(projects.filter((proj) => proj.id !== id))
+    }
   }
 
-  const handleFileSelect = (file: File) => {
-    setNewProject({
-      ...newProject,
-      file,
-    })
-  }
+  // ----------------------------------------------------------------
+  // File handling (optional)
+  // ----------------------------------------------------------------
+  // const handleFileSelect = (file: File) => {
+  //   setNewProject({ ...newProject, file })
+  //   // If you want to upload to Supabase Storage, do it here
+  // }
 
+  // ----------------------------------------------------------------
+  // Checkbox for "ongoing" project
+  // ----------------------------------------------------------------
   const handleCheckboxChange = (checked: boolean) => {
     const value = Boolean(checked)
     setIsChecked(value)
-    handleInputChange("ongoing", checked);
+    handleInputChange("ongoing", value)
 
     if (value) {
       handleInputChange("endDate", undefined)
     }
   }
 
+  // ----------------------------------------------------------------
+  // Generic input handler
+  // ----------------------------------------------------------------
   const handleInputChange = <K extends keyof Project>(field: K, value: Project[K]) => {
-    setNewProject({
-      ...newProject,
-      [field]: value,
-    })
+    setNewProject({ ...newProject, [field]: value })
   }
 
+  // ----------------------------------------------------------------
+  // Technology tags
+  // ----------------------------------------------------------------
   const handleAddTechnology = () => {
     if (techInput && !newProject.technologies?.includes(techInput)) {
       setNewProject({
@@ -132,6 +215,9 @@ export default function ProjectsTab() {
     })
   }
 
+  // ----------------------------------------------------------------
+  // Month / Year arrays
+  // ----------------------------------------------------------------
   const months = [
     "January",
     "February",
@@ -146,10 +232,12 @@ export default function ProjectsTab() {
     "November",
     "December",
   ]
-
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i)
 
+  // ----------------------------------------------------------------
+  // Helper to display "YYYY-MM" as "Month YYYY"
+  // ----------------------------------------------------------------
   const formatDate = (dateString?: string) => {
     if (!dateString) return ""
     const [year, month] = dateString.split("-")
@@ -157,6 +245,9 @@ export default function ProjectsTab() {
     return `${months[monthIndex]} ${year}`
   }
 
+  // ----------------------------------------------------------------
+  // Project types for the dropdown
+  // ----------------------------------------------------------------
   const projectTypes = [
     "Web Application",
     "Mobile App",
@@ -169,26 +260,33 @@ export default function ProjectsTab() {
     "Other",
   ]
 
+  // ----------------------------------------------------------------
+  // Render
+  // ----------------------------------------------------------------
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="w-full mx-auto">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <CardTitle>Projects</CardTitle>
+
+        {/* Dialog for adding a new project */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="flex items-center gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" /> Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+
+          <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Add Project</DialogTitle>
             </DialogHeader>
+
             <div className="grid gap-4 py-4">
+              {/* Project Name */}
               <div className="grid gap-2">
                 <Label htmlFor="projectName">Project Name*</Label>
                 <Input
                   id="projectName"
-                  name="projectName"
                   value={newProject.name || ""}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   placeholder="e.g. E-commerce Platform"
@@ -196,9 +294,12 @@ export default function ProjectsTab() {
                 />
               </div>
 
+              {/* Project Type */}
               <div className="grid gap-2">
                 <Label htmlFor="type">Project Type*</Label>
-                <Select onValueChange={(value) => handleInputChange("type", value)}>
+                <Select
+                  onValueChange={(value) => handleInputChange("type", value)}
+                >
                   <SelectTrigger id="type" name="type">
                     <SelectValue placeholder="Select project type" />
                   </SelectTrigger>
@@ -212,10 +313,12 @@ export default function ProjectsTab() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Start / End Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Start Date */}
                 <div className="grid gap-2">
                   <Label>Start Date*</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col xs:flex-row gap-2">
                     <Select
                       onValueChange={(value) => {
                         const currentDate = newProject.startDate?.split("-") || ["", ""]
@@ -227,7 +330,10 @@ export default function ProjectsTab() {
                       </SelectTrigger>
                       <SelectContent>
                         {months.map((month, index) => (
-                          <SelectItem key={month} value={(index + 1).toString().padStart(2, "0")}>
+                          <SelectItem
+                            key={month}
+                            value={(index + 1).toString().padStart(2, "0")}
+                          >
                             {month}
                           </SelectItem>
                         ))}
@@ -254,23 +360,26 @@ export default function ProjectsTab() {
                   </div>
                 </div>
 
+                {/* End Date (only if not ongoing) */}
                 {!newProject.ongoing && (
                   <div className="grid gap-2">
                     <Label>End Date</Label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col xs:flex-row gap-2">
                       <Select
                         onValueChange={(value) => {
                           const currentDate = newProject.endDate?.split("-") || ["", ""]
                           handleInputChange("endDate", `${currentDate[0]}-${value}`)
                         }}
-                        disabled={newProject.ongoing}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Month" />
                         </SelectTrigger>
                         <SelectContent>
                           {months.map((month, index) => (
-                            <SelectItem key={month} value={(index + 1).toString().padStart(2, "0")}>
+                            <SelectItem
+                              key={month}
+                              value={(index + 1).toString().padStart(2, "0")}
+                            >
                               {month}
                             </SelectItem>
                           ))}
@@ -282,7 +391,6 @@ export default function ProjectsTab() {
                           const currentDate = newProject.endDate?.split("-") || ["", ""]
                           handleInputChange("endDate", `${value}-${currentDate[1]}`)
                         }}
-                        disabled={newProject.ongoing}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Year" />
@@ -300,6 +408,7 @@ export default function ProjectsTab() {
                 )}
               </div>
 
+              {/* Ongoing checkbox */}
               <div
                 className="flex items-center space-x-2 cursor-pointer"
                 onClick={() => handleCheckboxChange(!isChecked)}
@@ -314,6 +423,7 @@ export default function ProjectsTab() {
                 </span>
               </div>
 
+              {/* Description */}
               <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -325,13 +435,15 @@ export default function ProjectsTab() {
                 />
               </div>
 
+              {/* Technologies Used */}
               <div className="grid gap-2">
                 <Label>Technologies Used</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col xs:flex-row gap-2">
                   <Input
                     value={techInput}
                     onChange={(e) => setTechInput(e.target.value)}
                     placeholder="e.g. React"
+                    className="flex-grow"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
@@ -339,7 +451,12 @@ export default function ProjectsTab() {
                       }
                     }}
                   />
-                  <Button type="button" onClick={handleAddTechnology} variant="outline">
+                  <Button
+                    type="button"
+                    onClick={handleAddTechnology}
+                    variant="outline"
+                    className="w-full xs:w-auto"
+                  >
                     Add
                   </Button>
                 </div>
@@ -361,11 +478,11 @@ export default function ProjectsTab() {
                 </div>
               </div>
 
+              {/* Repository URL */}
               <div className="grid gap-2">
                 <Label htmlFor="repoUrl">Repository URL</Label>
                 <Input
                   id="repoUrl"
-                  name="repoUrl"
                   value={newProject.repoUrl || ""}
                   onChange={(e) => handleInputChange("repoUrl", e.target.value)}
                   placeholder="e.g. https://github.com/username/project"
@@ -373,11 +490,11 @@ export default function ProjectsTab() {
                 />
               </div>
 
+              {/* Demo URL */}
               <div className="grid gap-2">
                 <Label htmlFor="demoUrl">Demo URL</Label>
                 <Input
                   id="demoUrl"
-                  name="demoUrl"
                   value={newProject.demoUrl || ""}
                   onChange={(e) => handleInputChange("demoUrl", e.target.value)}
                   placeholder="e.g. https://project-demo.example.com"
@@ -385,26 +502,42 @@ export default function ProjectsTab() {
                 />
               </div>
 
-              <div className="grid gap-2">
+              {/* File Upload (optional) */}
+              {/* <div className="grid gap-2">
                 <Label>Upload Project Image/Screenshot</Label>
                 <FileUpload onFileSelect={handleFileSelect} accept=".jpg,.jpeg,.png,.gif" />
-              </div>
+              </div> */}
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+
+            {/* Dialog Actions */}
+            <div className="flex flex-col xs:flex-row justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="w-full xs:w-auto order-2 xs:order-1"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddProject}>Add</Button>
+              <Button
+                onClick={handleAddProject}
+                className="w-full xs:w-auto order-1 xs:order-2"
+              >
+                Add
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </CardHeader>
+
+      {/* Projects List */}
       <CardContent>
         <div className="space-y-6">
           {projects.length === 0 ? (
             <div className="text-center py-8">
               <FolderGit2 className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-gray-500 dark:text-gray-400">No projects added yet</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                No projects added yet
+              </p>
             </div>
           ) : (
             projects.map((project, index) => (
@@ -415,20 +548,27 @@ export default function ProjectsTab() {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 className="border rounded-lg p-4 hover:shadow-md transition-shadow"
               >
-                <div className="flex justify-between">
-                  <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                  <div className="flex flex-col xs:flex-row gap-3">
                     <FolderGit2 className="w-10 h-10 text-orange-500 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold text-lg">{project.name}</h3>
-                      <p className="text-gray-600 dark:text-gray-400">{project.type}</p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {project.type}
+                      </p>
                       <div className="flex items-center gap-1 mt-2 text-sm text-gray-500 dark:text-gray-400">
                         <Calendar className="w-4 h-4" />
-                        <span>
-                          {formatDate(project.startDate)} - {project.ongoing ? "Present" : formatDate(project.endDate)}
+                        <span className="text-xs xs:text-sm">
+                          {formatDate(project.startDate)} -{" "}
+                          {project.ongoing
+                            ? "Present"
+                            : formatDate(project.endDate)}
                         </span>
                       </div>
                       {project.description && (
-                        <p className="text-sm mt-2 text-gray-600 dark:text-gray-400">{project.description}</p>
+                        <p className="text-sm mt-2 text-gray-600 dark:text-gray-400 line-clamp-3 sm:line-clamp-none">
+                          {project.description}
+                        </p>
                       )}
                       {project.technologies && project.technologies.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
@@ -442,7 +582,7 @@ export default function ProjectsTab() {
                           ))}
                         </div>
                       )}
-                      <div className="flex gap-4 mt-3">
+                      <div className="flex flex-wrap gap-4 mt-3">
                         {project.repoUrl && (
                           <a
                             href={project.repoUrl}
@@ -472,7 +612,7 @@ export default function ProjectsTab() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDeleteProject(project.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8 self-start sm:self-center"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -485,4 +625,3 @@ export default function ProjectsTab() {
     </Card>
   )
 }
-

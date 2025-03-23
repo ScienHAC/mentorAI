@@ -9,12 +9,12 @@ export default function Profile() {
         <div className="h-screen flex flex-col">
             <header className="container mx-auto px-4 py-4 md:py-6 flex items-center">
                 {/* Logikxmind aligned left and linked to home */}
-                <Link href="/" className={`text-xl md:text-2xl font-bold lowercase ${spaceMono.className} mr-auto`}>
-                    logikxmind
+                <Link href="/" className={` md:text-2xl text-bold text-2xl text-emerald-600 font-bold ${spaceMono.className} ml-14 sm:ml-12 md:ml-0 mr-auto`}>
+                    Logikxmind
                 </Link>
 
                 {/* Desktop Navigation */}
-                <nav className="hidden md:flex space-x-4">
+                <nav className="hidden sm:flex space-x-4">
                     <Link href="/" className="hover:underline font-semibold">
                         Home
                     </Link>
