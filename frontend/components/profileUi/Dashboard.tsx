@@ -1,5 +1,7 @@
 "use client"
-import { useState } from "react"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import VerticalNav from "./VerticalNav"
 import ProfileSection from "./ProfileSection"
@@ -35,7 +37,27 @@ const tabs: Tab[] = [
 ]
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("profile")
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState<string>("profile")
+
+  // Read active tab from URL on initial load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const tabFromUrl = urlParams.get("tab")
+
+    if (tabFromUrl && tabs.some(tab => tab.id === tabFromUrl)) {
+      setActiveTab(tabFromUrl)
+    } else {
+      // If no tab is present in the URL, set default tab
+      router.replace(`?tab=profile`, { scroll: false })
+    }
+  }, [router])
+
+  // Update the URL when the tab changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab)
+    router.push(`?tab=${newTab}`, { scroll: false }) // Update URL without reloading
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -66,11 +88,15 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-indigo-900">
-      <VerticalNav tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Sidebar Navigation */}
+      <VerticalNav tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} />
+      
+      {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden h-screen">
         <div className="flex justify-end p-4">
           <ThemeToggle />
         </div>
+        
         <div className="flex-1 overflow-auto p-8">
           <AnimatePresence mode="wait">
             <motion.div
@@ -85,6 +111,8 @@ export default function Dashboard() {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Footer */}
         <footer className="bg-muted py-6 mt-16">
           <div className="container mx-auto px-4 text-center text-muted-foreground">
             © 2025 logikxmind. All rights reserved.

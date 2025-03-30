@@ -1,0 +1,14 @@
+{
+    "resources": [
+        {
+            "name": "Study Tips for Exams",
+            "url": "https://example.com/study-tips",
+            "description": "Helpful tips for exam preparation."
+        },
+        {
+            "name": "Career Guide for Computer Science",
+            "url": "https://example.com/cs-careers",
+            "description": "Information about career paths in CS."
+        }
+    ]
+}
