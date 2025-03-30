@@ -79,13 +79,75 @@ export default function ProfileSection() {
     }
 
     const fetchProfile = async () => {
+      if (!user) {
+        console.log("No user logged in.")
+        return
+      }
+    
       try {
+        // First check if profile exists to avoid multiple results error
+        const { data: profileExists, error: countError } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact" })
+          .eq("id", user.id)
+        
+        if (countError) {
+          console.error("❌ Error checking profile existence:", countError.message)
+          return
+        }
+        
+        // If no profile exists, create one
+        if (profileExists.length === 0) {
+          console.log("No profile found, creating one...")
+          
+          const newProfile = {
+            id: user.id,
+            email: user.email || "",
+            username: user.user_metadata?.user_name || "",
+            avatar_url: user.user_metadata?.avatar_url || "",
+            full_name: user.user_metadata?.name || "New User",
+            university: "Tech University",
+            year_of_joining: "2021",
+            course: "",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+          
+          const { error: insertError } = await supabase
+            .from("profiles")
+            .insert([newProfile])
+          
+          if (insertError) {
+            console.error("❌ Error creating profile:", insertError.message)
+            return
+          }
+          
+          setProfileData({
+            fullName: newProfile.full_name,
+            email: newProfile.email,
+            university: newProfile.university,
+            course: newProfile.course,
+            yearOfJoining: newProfile.year_of_joining,
+            avatarUrl: newProfile.avatar_url
+          })
+          
+          console.log("✅ Profile created successfully")
+          return
+        }
+        
+        // If multiple profiles exist, this is an error we should clean up
+        if (profileExists.length > 1) {
+          console.error("❌ Multiple profiles found for this user. This is unexpected.")
+          // You could add code here to delete extra profiles if needed
+        }
+        
+        // Now fetch the profile data
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .single()
-
+    
         if (error) {
           console.error("❌ Error fetching profile:", error.message)
         } else {
@@ -95,7 +157,7 @@ export default function ProfileSection() {
             university: data.university || "Tech University",
             course: data.course || "",
             yearOfJoining: data.year_of_joining || "2021",
-            avatarUrl: data.avatar_url || "",
+            avatarUrl: data.avatar_url || ""
           })
         }
       } catch (err) {
@@ -146,16 +208,16 @@ export default function ProfileSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full px-4 md:px-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center justify-between"
+        className="flex flex-col md:flex-row items-center justify-between gap-6"
       >
-        <div className="flex items-center space-x-6">
+        <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 sm:space-x-6 md:space-x-6 w-full sm:w-auto md:w-auto">
           <div className="relative">
-            <div className="w-32 h-32 relative rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 md:w-32 md:h-32 relative rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
               {profileData.avatarUrl ? (
                 <Image
                   src={profileData.avatarUrl}
@@ -166,22 +228,22 @@ export default function ProfileSection() {
                   className="object-cover rounded-full"
                 />
               ) : (
-                <User className="w-16 h-16 text-gray-400" />
+                <User className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
               )}
             </div>
             <Button size="sm" className="absolute bottom-0 right-0 rounded-full">
-              <Upload className="w-4 h-4" />
+              <Upload className="w-3 h-3 md:w-4 md:h-4" />
             </Button>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">{profileData.fullName || "No Name"}</h1>
-            <p className="text-gray-500 dark:text-gray-400">{profileData.email || "No Email"}</p>
+          <div className="text-center md:text-left">
+            <h1 className="text-xl md:text-2xl font-bold">{profileData.fullName || "No Name"}</h1>
+            <p className="text-sm md:text-base text-gray-500 dark:text-gray-400">{profileData.email || "No Email"}</p>
           </div>
         </div>
 
         <motion.button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 px-6 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+          className="flex items-center gap-2 px-4 md:px-6 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg w-full md:w-auto justify-center md:justify-start"
           whileHover="hover"
         >
           Go to Dashboard
@@ -192,7 +254,7 @@ export default function ProfileSection() {
             }}
             transition={{ type: "spring", stiffness: 300 }}
           >
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
           </motion.div>
         </motion.button>
       </motion.div>
@@ -263,7 +325,7 @@ export default function ProfileSection() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="max-h-[300px] overflow-auto p-1">
+              <div className="max-h-[200px] md:max-h-[300px] overflow-auto p-1">
                 {filteredCourses.length > 0 ? (
                   filteredCourses.map((course) => (
                     <div
@@ -318,14 +380,14 @@ export default function ProfileSection() {
 
       <div className="flex gap-4">
         {!isEditing ? (
-          <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+          <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2 w-full md:w-auto">
             <Pencil className="w-4 h-4" /> Edit Profile
           </Button>
         ) : (
           <Button
             onClick={handleSaveChanges}
             disabled={loading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 w-full md:w-auto"
           >
             <Save className="w-4 h-4" /> {loading ? "Saving..." : "Save Changes"}
           </Button>
@@ -343,14 +405,14 @@ export default function ProfileSection() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-4">
-              <Award className="w-8 h-8 text-emerald-500" />
+              <Award className="w-6 h-6 md:w-8 md:h-8 text-emerald-500" />
               <div className="flex-1">
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">Overall Progress</span>
-                  <span className="text-sm font-medium">65%</span>
+                  <span className="text-xs md:text-sm font-medium">Overall Progress</span>
+                  <span className="text-xs md:text-sm font-medium">65%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                  <div className="bg-emerald-500 h-2.5 rounded-full" style={{ width: "65%" }}></div>
+                <div className="w-full bg-gray-200 rounded-full h-2 md:h-2.5 dark:bg-gray-700">
+                  <div className="bg-emerald-500 h-2 md:h-2.5 rounded-full" style={{ width: "65%" }}></div>
                 </div>
               </div>
             </div>
