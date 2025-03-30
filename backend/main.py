@@ -25,7 +25,9 @@ def run():
             'progress': {'roadmap_completion': 50}
         }
     }
-    CareerDevelopmentCrew().crew().kickoff(inputs=inputs)
+    
+    print(inputs)
+    # CareerDevelopmentCrew().crew().kickoff(inputs=inputs)
 
 if __name__ == "__main__":
     run()
