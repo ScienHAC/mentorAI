@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Award, Plus, Trash2, Calendar, Link2, ExternalLink } from "lucide-react
 import FileUpload from "./file-upload"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useAuth } from "@/auth/AuthProvider";
 
 interface Certification {
   id: string
@@ -19,55 +20,167 @@ interface Certification {
   expirationDate?: string
   credentialUrl?: string
   credentialId?: string
+  fileUrl?: string;
   file?: File
 }
 
 export default function LicensesCertifications() {
-  const [certifications, setCertifications] = useState<Certification[]>([
-    {
-      id: "1",
-      name: "AWS Certified Solutions Architect",
-      issuer: "Amazon Web Services",
-      issueDate: "2023-06",
-      expirationDate: "2026-06",
-      credentialId: "AWS-123456",
-      credentialUrl: "https://aws.amazon.com/verification",
-    },
-    {
-      id: "2",
-      name: "Professional Scrum Master I",
-      issuer: "Scrum.org",
-      issueDate: "2022-11",
-      credentialId: "PSM-123456",
-    },
-  ])
+  const { supabase, user } = useAuth();
+  const [certifications, setCertifications] = useState<Certification[]>([]);
 
   const [newCertification, setNewCertification] = useState<Partial<Certification>>({})
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  const handleAddCertification = () => {
-    if (newCertification.name && newCertification.issuer && newCertification.issueDate) {
-      setCertifications([
-        ...certifications,
+  const fetchCertifications = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("licenses_certifications")
+        .select("*")
+        .eq("user_id", user.id);
+      if (error) {
+        console.error("❌ Error fetching certifications:", error.message);
+      } else {
+        setCertifications(
+          data.map((cert) => ({
+            id: cert.id,
+            name: cert.name,
+            issuer: cert.issuer,
+            issueDate: cert.issue_date,
+            expirationDate: cert.expiration_date || undefined,
+            credentialId: cert.credential_id || undefined,
+            credentialUrl: cert.credential_url || undefined,
+            fileUrl: cert.file_url || undefined,
+            file: undefined,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCertifications();
+  }, [user]);
+
+  const handleAddCertification = async () => {
+    if (!user || !newCertification.name || !newCertification.issuer || !newCertification.issueDate) return;
+
+    let fileUrl = null;
+
+    if (newCertification.file) {
+      const filePath = `certifications/${user.id}/${new Date().getTime()}_${newCertification.file.name}`;
+
+      const { error: fileError } = await supabase
+        .storage
+        .from("cert")
+        .upload(filePath, newCertification.file);
+
+      if (fileError) {
+        console.error("❌ Error uploading file:", fileError.message);
+        return;
+      }
+
+      // Get the public URL of the uploaded file
+      fileUrl = supabase.storage.from("cert").getPublicUrl(filePath).data.publicUrl;
+    }
+
+    try {
+      const { data, error } = await supabase.from("licenses_certifications").insert([
         {
-          id: Date.now().toString(),
+          user_id: user.id,
           name: newCertification.name,
           issuer: newCertification.issuer,
-          issueDate: newCertification.issueDate,
-          expirationDate: newCertification.expirationDate,
-          credentialUrl: newCertification.credentialUrl,
-          credentialId: newCertification.credentialId,
-          file: newCertification.file,
+          issue_date: newCertification.issueDate,
+          expiration_date: newCertification.expirationDate || null,
+          credential_id: newCertification.credentialId || null,
+          credential_url: newCertification.credentialUrl || null,
+          file_url: fileUrl, // Save the file URL instead of the file object
+          created_at: new Date().toISOString(),
         },
-      ])
-      setNewCertification({})
-      setIsDialogOpen(false)
-    }
-  }
+      ]).select();
 
-  const handleDeleteCertification = (id: string) => {
-    setCertifications(certifications.filter((cert) => cert.id !== id))
-  }
+      if (error) {
+        console.error("❌ Error adding certification:", error.message);
+      } else if (data && data.length > 0) {
+        const newCert: Certification = {
+          id: data[0].id,
+          name: data[0].name,
+          issuer: data[0].issuer,
+          issueDate: data[0].issue_date,
+          expirationDate: data[0].expiration_date || undefined,
+          credentialId: data[0].credential_id || undefined,
+          credentialUrl: data[0].credential_url || undefined,
+          fileUrl: data[0].file_url || undefined,
+          file: undefined,
+        };
+
+        setCertifications((prev) => [...prev, newCert]);
+        setNewCertification({});
+        setIsDialogOpen(false);
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+    }
+  };
+
+  const handleDeleteCertification = async (id: string, fileUrl?: string) => {
+    try {
+      // Delete file from Supabase storage if fileUrl exists
+      if (fileUrl) {
+        // Fixed: Extract the correct file path
+        const filePath = fileUrl.split("public/cert/")[1];
+        const { error: fileError } = await supabase.storage
+          .from('cert')
+          .remove([filePath]);
+
+        if (fileError) {
+          console.error("❌ Error deleting file from storage:", fileError.message);
+        } else {
+          console.log("✅ File deleted successfully:", filePath);
+        }
+      }
+
+      // Delete the certification record from the database
+      const { error } = await supabase
+        .from("licenses_certifications")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("❌ Error deleting certification:", error.message);
+      } else {
+        setCertifications(certifications.filter((cert) => cert.id !== id));
+        console.log("✅ Certification deleted successfully.");
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+    }
+  };
+
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("certifications")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "licenses_certifications" },
+        () => {
+          fetchCertifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+
 
   const handleFileSelect = (file: File) => {
     setNewCertification({
@@ -301,12 +414,22 @@ export default function LicensesCertifications() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
+                      {cert.fileUrl && (
+                        <a
+                          href={cert.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-4 h-4" /> View Certificate
+                        </a>
+                      )}
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteCertification(cert.id)}
+                    onClick={() => handleDeleteCertification(cert.id, cert.fileUrl)}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8"
                   >
                     <Trash2 className="w-4 h-4" />
