@@ -63,7 +63,7 @@ export default function LicensesCertifications() {
 
   useEffect(() => {
     fetchCertifications();
-  }, [user]);
+  }, [user, fetchCertifications]);
 
   const handleAddCertification = async () => {
     if (!user || !newCertification.name || !newCertification.issuer || !newCertification.issueDate) return;
@@ -178,7 +178,7 @@ export default function LicensesCertifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, supabase, fetchCertifications]);
 
 
 
