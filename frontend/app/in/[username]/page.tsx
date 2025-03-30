@@ -13,7 +13,7 @@ import { createServerSupabaseClient } from "@/utils/supabase-server"
 const spaceMono = Space_Mono({ weight: "400", subsets: ["latin"] })
 
 type Props = {
-    params: { username: string }
+    params: Promise<{ username: string }>;
 }
 
 
