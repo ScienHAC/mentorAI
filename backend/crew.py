@@ -1,79 +1,42 @@
-from crewai import Agent, Crew, Process, Task, LLM
-from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import DirectoryReadTool, FileReadTool, SerperDevTool, WebsiteSearchTool, TXTSearchTool, PDFSearchTool
+from crewai import Agent, Crew, Task, Process, LLM
+import yaml
 
-@CrewBase
-class CareerDevelopmentCrew:
-    @agent
-    def profile_analyzer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['profile_analyzer'],
-            llm = LLM(
-                model="gemini/gemini-1.5-flash-latest",
+from dotenv import load_dotenv
+
+load_dotenv()
+
+with open('config/agents.yaml') as f:
+    agents_cfg = yaml.safe_load(f)
+
+with open('config/tasks.yaml') as f:
+    tasks_cfg = yaml.safe_load(f)
+
+gemini_llm = LLM(
+                model="gemini/gemini-1.5-pro-latest",
                 temperature=0.7
-            ),
-            verbose=True,
-            tools=[
-                DirectoryReadTool(directory="./user_data"),
-                FileReadTool()
-            ]
-        )
+            )
 
-    @agent
-    def roadmap_creator(self) -> Agent:
-        return Agent(
-            config=self.agents_config['roadmap_creator'],
-            llm = LLM(
-                model="gemini/gemini-1.5-flash-latest",
-                temperature=0.7
-            ),
-            verbose=True,
-            tools=[
-                SerperDevTool(),
-                WebsiteSearchTool()
-            ]
-        )
+agents = {
+    name: Agent(
+        role=config['role'],
+        goal=config['goal'],
+        backstory=config['backstory'],
+        llm=gemini_llm,
+        verbose=True
+    ) for name, config in agents_cfg.items()
+}
 
-    @agent
-    def career_advisor(self) -> Agent:
-        return Agent(
-            config=self.agents_config['career_advisor'],
-            llm = LLM(
-                model="gemini/gemini-1.5-flash-latest",
-                temperature=0.7
-            ),
-            verbose=True,
-            tools=[
-                TXTSearchTool(),
-                PDFSearchTool()
-            ]
-        )
+tasks = [
+    Task(
+        description=config['description'],
+        expected_output=config['expected_output'],
+        agent=agents[config['agent']]
+    ) for config in tasks_cfg.values()
+]
 
-    @task
-    def analyze_profile_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['analyze_profile'],
-        )
-
-    @task
-    def create_roadmap_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['create_roadmap'],
-        )
-
-    @task
-    def career_guidance_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['career_guidance'],
-            output_file='output/career_guidance.md'
-        )
-
-    @crew
-    def crew(self) -> Crew:
-        """Creates the Career Development crew"""
-        return Crew(
-            agents=self.agents,  
-            tasks=self.tasks, 
-            process=Process.sequential,
-            verbose=True,
-        )
+mentor_ai_crew = Crew(
+    agents=list(agents.values()),
+    tasks=tasks,
+    process=Process.sequential,
+    verbose=True
+)

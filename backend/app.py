@@ -39,14 +39,14 @@ chat_collection = db["chat"]
 app = FastAPI()
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/login")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://logikxmind.com/chat"],
-    allow_origins=["https://logikxmind.com/chat"], 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["https://logikxmind.com/chat"],
+#     allow_origins=["https://logikxmind.com/chat"], 
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 # --------------------------- UTILS ---------------------------
 
