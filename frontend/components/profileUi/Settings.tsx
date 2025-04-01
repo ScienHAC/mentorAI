@@ -27,7 +27,7 @@ export default function Settings() {
   useEffect(() => {
     if (!user) return;
     fetchUserSettings();
-  }, [user]);
+  }, [user, fetchUserSettings]);
 
   async function fetchUserSettings() {
     if (!user?.id) return;
@@ -179,6 +179,7 @@ export default function Settings() {
       newPublicProfile: updatedPublic,
       newAiAssistant: updatedAi,
     });
+    console.log("Settings saved:", success);
 
     // If save fails, we'll revert in the saveSettings function
   }
