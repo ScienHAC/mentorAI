@@ -22,8 +22,8 @@ interface Education {
   degree: string
   fieldOfStudy: string
   location?: string
-  startDate: string    // We'll store "YYYY-MM" locally
-  endDate?: string     // Also "YYYY-MM"
+  startDate: string
+  endDate?: string
   grade?: string
   activities?: string
   description?: string
@@ -57,17 +57,15 @@ export default function EducationTab() {
         setEducations(
           data.map((edu) => ({
             id: edu.id,
-            school: edu.institution_name,
+            school: edu.school,
             degree: edu.degree,
             fieldOfStudy: edu.field_of_study,
             location: edu.location ?? "",
-            // Convert "YYYY-MM-DD" from DB to "YYYY-MM" for local state
-            startDate: edu.start_date ? edu.start_date.slice(0, 7) : "",
-            endDate: edu.end_date ? edu.end_date.slice(0, 7) : "",
+            startDate: edu.start_date,
+            endDate: edu.end_date || "",
             grade: edu.grade ?? "",
             activities: edu.activities ?? "",
             description: edu.description ?? "",
-            // file: undefined, // file is not stored in DB
           }))
         )
       }
@@ -89,23 +87,14 @@ export default function EducationTab() {
       newEducation.fieldOfStudy &&
       newEducation.startDate
     ) {
-      // Convert "YYYY-MM" to a full date string for DB insertion (YYYY-MM-01)
-      const startDateForDB = newEducation.startDate
-        ? `${newEducation.startDate}-01`
-        : null
-
-      const endDateForDB = newEducation.endDate
-        ? `${newEducation.endDate}-01`
-        : null
-
       const educationToInsert = {
         user_id: user.id,
-        institution_name: newEducation.school,
+        school: newEducation.school,
         degree: newEducation.degree,
         field_of_study: newEducation.fieldOfStudy,
         location: newEducation.location || null,
-        start_date: startDateForDB,
-        end_date: endDateForDB,
+        start_date: newEducation.startDate,
+        end_date: newEducation.endDate || null,
         grade: newEducation.grade || null,
         activities: newEducation.activities || null,
         description: newEducation.description || null,
@@ -125,16 +114,15 @@ export default function EducationTab() {
           ...educations,
           {
             id: data.id,
-            school: data.institution_name,
+            school: data.school,
             degree: data.degree,
             fieldOfStudy: data.field_of_study,
             location: data.location ?? "",
-            startDate: data.start_date ? data.start_date.slice(0, 7) : "",
-            endDate: data.end_date ? data.end_date.slice(0, 7) : "",
+            startDate: data.start_date,
+            endDate: data.end_date || "",
             grade: data.grade ?? "",
             activities: data.activities ?? "",
             description: data.description ?? "",
-            // file: undefined,
           },
         ])
         // Reset form and close dialog
@@ -198,13 +186,13 @@ export default function EducationTab() {
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i)
 
   // ----------------------------------------------------------------
-  // 7) Helper to display "YYYY-MM" as "Month YYYY"
+  // 7) Helper to format date display
   // ----------------------------------------------------------------
   const formatDate = (dateString?: string) => {
     if (!dateString) return ""
-    const [year, month] = dateString.split("-")
-    const monthIndex = Number.parseInt(month) - 1
-    return `${months[monthIndex]} ${year}`
+    // This function assumes dateString is already in the correct format
+    // If you need to convert from ISO or another format, modify as needed
+    return dateString
   }
 
   return (
@@ -269,99 +257,26 @@ export default function EducationTab() {
                 />
               </div>
 
-              {/* Start / End Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Start Date */}
-                <div className="grid gap-2">
-                  <Label>Start Date*</Label>
-                  <div className="flex flex-col xs:flex-row gap-2">
-                    <Select
-                      onValueChange={(value) => {
-                        const currentDate = newEducation.startDate?.split("-") || ["", ""]
-                        // Keep the year, update the month
-                        handleInputChange("startDate", `${currentDate[0]}-${value}`)
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map((month, index) => (
-                          <SelectItem
-                            key={month}
-                            value={(index + 1).toString().padStart(2, "0")}
-                          >
-                            {month}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {/* Start Date */}
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">Start Date*</Label>
+                <Input
+                  id="startDate"
+                  value={newEducation.startDate || ""}
+                  onChange={(e) => handleInputChange("startDate", e.target.value)}
+                  placeholder="e.g. September 2020"
+                />
+              </div>
 
-                    <Select
-                      onValueChange={(value) => {
-                        const currentDate = newEducation.startDate?.split("-") || ["", ""]
-                        // Keep the month, update the year
-                        handleInputChange("startDate", `${value}-${currentDate[1]}`)
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map((year) => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* End Date */}
-                <div className="grid gap-2">
-                  <Label>End Date (or Expected)</Label>
-                  <div className="flex flex-col xs:flex-row gap-2">
-                    <Select
-                      onValueChange={(value) => {
-                        const currentDate = newEducation.endDate?.split("-") || ["", ""]
-                        handleInputChange("endDate", `${currentDate[0]}-${value}`)
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map((month, index) => (
-                          <SelectItem
-                            key={month}
-                            value={(index + 1).toString().padStart(2, "0")}
-                          >
-                            {month}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      onValueChange={(value) => {
-                        const currentDate = newEducation.endDate?.split("-") || ["", ""]
-                        handleInputChange("endDate", `${value}-${currentDate[1]}`)
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map((year) => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              {/* End Date */}
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">End Date (or Expected)</Label>
+                <Input
+                  id="endDate"
+                  value={newEducation.endDate || ""}
+                  onChange={(e) => handleInputChange("endDate", e.target.value)}
+                  placeholder="e.g. June 2024"
+                />
               </div>
 
               {/* Grade */}
@@ -403,7 +318,7 @@ export default function EducationTab() {
                 <Label>Upload Diploma/Certificate</Label>
                 <FileUpload onFileSelect={handleFileSelect} accept=".pdf,.jpg,.jpeg,.png" />
               </div>*/}
-            </div> 
+            </div>
 
             {/* Dialog Buttons */}
             <div className="flex flex-col xs:flex-row justify-end gap-2 mt-4">

@@ -22,11 +22,8 @@ export default function VerticalNav({
 }: VerticalNavProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 0
-  );
+  const [windowWidth, setWindowWidth] = useState<number | null>(null); // Ensure null on SSR
 
-  // Update screen size states
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -40,11 +37,9 @@ export default function VerticalNav({
 
   const toggleNav = () => setIsNavOpen((prev) => !prev);
 
-  // Component icons
   const MenuIcon = Icons["Menu"] as LucideIcon;
   const XIcon = Icons["X"] as LucideIcon;
 
-  // Define nav widths for various breakpoints
   const navWidths = {
     mobile: "16rem",
     md: "14rem",
@@ -53,25 +48,22 @@ export default function VerticalNav({
     "2xl": "20rem",
   };
 
-  // Get the nav width based on screen size and state
   const getNavWidth = () => {
     if (isMobile) return isNavOpen ? navWidths.mobile : "0rem";
+    if (!windowWidth) return "0rem"; // Avoid mismatch during SSR
     if (windowWidth >= 1536) return navWidths["2xl"];
     if (windowWidth >= 1280) return navWidths.xl;
     if (windowWidth >= 1024) return navWidths.lg;
     return navWidths.md;
   };
 
-  // Calculate content margin to offset the nav
   const getContentMargin = () => {
+    if (windowWidth === null) return "ml-0"; // Default during SSR
     if (isMobile) return "ml-0";
-    if (windowWidth >= 1536) return "ml-0";
-    if (windowWidth >= 1280) return "ml-0";
     if (windowWidth >= 1024) return "ml-64";
     return "ml-56";
   };
 
-  // Framer Motion variants for the nav container
   const navVariants = {
     open: {
       width: getNavWidth(),
@@ -87,7 +79,6 @@ export default function VerticalNav({
 
   return (
     <div className="flex h-full relative">
-      {/* Mobile toggle button */}
       <button
         className="md:hidden fixed top-3 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
         onClick={toggleNav}
@@ -100,7 +91,6 @@ export default function VerticalNav({
         )}
       </button>
 
-      {/* Mobile overlay */}
       <AnimatePresence>
         {isMobile && isNavOpen && (
           <motion.div
@@ -114,7 +104,6 @@ export default function VerticalNav({
         )}
       </AnimatePresence>
 
-      {/* Navigation menu */}
       <motion.nav
         className="fixed md:sticky top-0 left-0 h-full z-40 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
         animate={isMobile ? (isNavOpen ? "open" : "closed") : "open"}
@@ -131,11 +120,10 @@ export default function VerticalNav({
                     setActiveTab(tab.id);
                     if (isMobile) setIsNavOpen(false);
                   }}
-                  className={`relative flex items-center w-full p-3 rounded-lg text-left transition-colors z-10 ${
-                    activeTab === tab.id
+                  className={`relative flex items-center w-full p-3 rounded-lg text-left transition-colors z-10 ${activeTab === tab.id
                       ? "text-white font-semibold"
                       : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  }`}
+                    }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -168,7 +156,6 @@ export default function VerticalNav({
         </div>
       </motion.nav>
 
-      {/* Main content area */}
       <div className={`flex-1 transition-all duration-300 ${getContentMargin()} ${isMobile ? "pt-16" : ""}`}>
         {/* Your main content goes here */}
       </div>
