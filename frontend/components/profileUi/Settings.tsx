@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
 // Your custom AuthProvider hook
 import { useAuth } from "@/auth/AuthProvider";
@@ -16,46 +17,66 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [publicProfile, setPublicProfile] = useState(false);
   const [aiAssistant, setAiAssistant] = useState(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
 
-  // Optional: track loading or error states
+  // Track loading, saving and error states
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // 3. Fetch existing user settings when user logs in
   useEffect(() => {
     if (!user) return;
     fetchUserSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   async function fetchUserSettings() {
+    if (!user?.id) return;
+
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("user_settings")
-        .select("email_notifications, public_profile, ai_learning_assistant")
+        .select("id, email_notifications, public_profile, ai_learning_assistant")
         .eq("user_id", user.id)
-        .single(); // Expecting at most one row
+        .single();
 
-      // If no row found, data will be null (error.code might be "PGRST116")
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching user settings:", error.message);
+      if (error) {
+        // PGRST116 means no rows found - this is expected for new users
+        if (error.code === "PGRST116") {
+          // For new users, we'll create a settings record when they toggle a setting
+          console.log("No settings found for user, will create on first update");
+        } else {
+          console.error("Error fetching user settings:", error.message);
+          toast({
+            title: "Error loading settings",
+            description: "Your settings could not be loaded. Please try again later.",
+            variant: "destructive",
+          });
+        }
+        return;
       }
 
+      // Update local state with fetched settings
       if (data) {
+        setSettingsId(data.id);
         setEmailNotifications(data.email_notifications);
         setPublicProfile(data.public_profile);
         setAiAssistant(data.ai_learning_assistant);
       }
     } catch (err) {
       console.error("Unexpected error:", err);
+      toast({
+        title: "Error loading settings",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  // 4. Upsert user settings
-  //    This will create the row if it doesn't exist, or update if it does.
-  async function upsertSettings({
+  // 4. Save user settings - using insert or update based on whether we have an ID
+  async function saveSettings({
     newEmailNotifications,
     newPublicProfile,
     newAiAssistant,
@@ -64,26 +85,79 @@ export default function Settings() {
     newPublicProfile: boolean;
     newAiAssistant: boolean;
   }) {
-    if (!user) return;
+    if (!user?.id) return;
 
-    // We rely on `upsert` with a matching user_id
-    const { error } = await supabase.from("user_settings").upsert({
-      user_id: user.id,
-      email_notifications: newEmailNotifications,
-      public_profile: newPublicProfile,
-      ai_learning_assistant: newAiAssistant,
-    },
-      { onConflict: "user_id" }
-    );
+    setSaving(true);
+    try {
+      let error;
 
-    if (error) {
-      console.error("Error upserting user settings:", error.message);
+      if (settingsId) {
+        // If we have a settings ID, update the existing record
+        const { error: updateError } = await supabase
+          .from("user_settings")
+          .update({
+            email_notifications: newEmailNotifications,
+            public_profile: newPublicProfile,
+            ai_learning_assistant: newAiAssistant,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", settingsId);
+
+        error = updateError;
+      } else {
+        // If no settings ID, insert a new record
+        const { error: insertError, data } = await supabase
+          .from("user_settings")
+          .insert({
+            user_id: user.id,
+            email_notifications: newEmailNotifications,
+            public_profile: newPublicProfile,
+            ai_learning_assistant: newAiAssistant,
+          })
+          .select("id");
+
+        error = insertError;
+
+        // If insert was successful, store the new ID
+        if (!insertError && data && data.length > 0) {
+          setSettingsId(data[0].id);
+        }
+      }
+
+      if (error) {
+        console.error("Error saving user settings:", error.message);
+        toast({
+          title: "Error saving settings",
+          description: "Your settings could not be saved. Please try again.",
+          variant: "destructive",
+        });
+
+        // Revert local state on error
+        fetchUserSettings();
+        return false;
+      }
+
+      toast({
+        title: "Settings updated",
+        description: "Your preferences have been saved successfully.",
+      });
+      return true;
+    } catch (err) {
+      console.error("Unexpected error during save:", err);
+      toast({
+        title: "Error saving settings",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setSaving(false);
     }
   }
 
   // 5. Generic toggle handler
-  function handleToggle(setting: "notifications" | "public" | "ai", value: boolean) {
-    // Update local states
+  async function handleToggle(setting: "notifications" | "public" | "ai", value: boolean) {
+    // Optimistically update UI
     let updatedEmail = emailNotifications;
     let updatedPublic = publicProfile;
     let updatedAi = aiAssistant;
@@ -99,12 +173,14 @@ export default function Settings() {
       setAiAssistant(value);
     }
 
-    // Upsert changes to DB
-    upsertSettings({
+    // Save changes to DB
+    const success = await saveSettings({
       newEmailNotifications: updatedEmail,
       newPublicProfile: updatedPublic,
       newAiAssistant: updatedAi,
     });
+
+    // If save fails, we'll revert in the saveSettings function
   }
 
   return (
@@ -130,7 +206,7 @@ export default function Settings() {
               id="notifications"
               checked={emailNotifications}
               onCheckedChange={(checked) => handleToggle("notifications", checked)}
-              disabled={loading}
+              disabled={loading || saving}
               className="ml-0 mt-1 sm:mt-0"
             />
           </div>
@@ -150,7 +226,7 @@ export default function Settings() {
               id="public-profile"
               checked={publicProfile}
               onCheckedChange={(checked) => handleToggle("public", checked)}
-              disabled={loading}
+              disabled={loading || saving}
               className="ml-0 mt-1 sm:mt-0"
             />
           </div>
@@ -170,7 +246,7 @@ export default function Settings() {
               id="ai-assistant"
               checked={aiAssistant}
               onCheckedChange={(checked) => handleToggle("ai", checked)}
-              disabled={loading}
+              disabled={loading || saving}
               className="ml-0 mt-1 sm:mt-0"
             />
           </div>
