@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -24,12 +24,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
 
   // 3. Fetch existing user settings when user logs in
-  useEffect(() => {
-    if (!user) return;
-    fetchUserSettings();
-  }, [user, fetchUserSettings]);
-
-  async function fetchUserSettings() {
+  const fetchUserSettings = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
@@ -40,24 +35,14 @@ export default function Settings() {
         .eq("user_id", user.id)
         .single();
 
-      if (error) {
-        // PGRST116 means no rows found - this is expected for new users
-        if (error.code === "PGRST116") {
-          // For new users, we'll create a settings record when they toggle a setting
-          console.log("No settings found for user, will create on first update");
-        } else {
-          console.error("Error fetching user settings:", error.message);
-          toast({
-            title: "Error loading settings",
-            description: "Your settings could not be loaded. Please try again later.",
-            variant: "destructive",
-          });
-        }
-        return;
-      }
-
-      // Update local state with fetched settings
-      if (data) {
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching user settings:", error.message);
+        toast({
+          title: "Error loading settings",
+          description: "Your settings could not be loaded. Please try again later.",
+          variant: "destructive",
+        });
+      } else if (data) {
         setSettingsId(data.id);
         setEmailNotifications(data.email_notifications);
         setPublicProfile(data.public_profile);
@@ -65,15 +50,14 @@ export default function Settings() {
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      toast({
-        title: "Error loading settings",
-        description: "An unexpected error occurred. Please try again later.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
-  }
+  }, [user]); // ✅ Dependencies included correctly
+
+  useEffect(() => {
+    fetchUserSettings();
+  }, [user, fetchUserSettings]);
 
   // 4. Save user settings - using insert or update based on whether we have an ID
   async function saveSettings({
