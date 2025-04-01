@@ -23,24 +23,18 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-// import FileUpload from "./file-upload"
 import { useAuth } from "@/auth/AuthProvider"
 
-// ----------------------------------------------------
-// Adjust the interface to use `role_title` instead of `title`.
-// Also note that the DB does not have a `current` column.
-// We handle "current" on the client by setting `end_date = null`.
-// ----------------------------------------------------
+// Updated interface to match database columns
 interface Experience {
   id: string
-  role_title: string
-  company_name: string
+  title: string
+  company: string
   location?: string
-  startDate: string       // local state for the start date
-  endDate?: string        // local state for the end date
-  current: boolean        // not stored in DB, derived from end_date
+  start_date: string
+  end_date?: string
+  current: boolean
   description?: string
-  file?: File
 }
 
 export default function ExperienceTab() {
@@ -53,15 +47,11 @@ export default function ExperienceTab() {
   const [isChecked, setIsChecked] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  // ----------------------------------------------------
-  // Fetch experiences for the current user on mount.
-  // Map `role_title` from DB to `role_title` in the interface,
-  // and derive `current` based on whether `end_date` is null.
-  // ----------------------------------------------------
-  useEffect(() => {
+  // Fetch experiences for the current user
+  const fetchExperiences = async () => {
     if (!user) return
 
-    const fetchExperiences = async () => {
+    try {
       const { data, error } = await supabase
         .from("experiences")
         .select("*")
@@ -70,123 +60,86 @@ export default function ExperienceTab() {
       if (error) {
         console.error("❌ Error fetching experiences:", error.message)
       } else {
-        setExperiences(
-          data.map((exp) => ({
-            id: exp.id,
-            // Map the DB column `role_title` to our interface
-            role_title: exp.role_title,
-            company_name: exp.company_name,
-            location: exp.location,
-            // Convert date columns to strings like "YYYY-MM"
-            startDate: exp.start_date ?? "",
-            endDate: exp.end_date ?? "",
-            description: exp.description,
-            // If `end_date` is null, treat it as currently working
-            current: exp.end_date == null,
-          }))
-        )
+        setExperiences(data || [])
       }
+    } catch (err) {
+      console.error("❌ Unexpected error fetching experiences:", err)
+    }
+  }
+
+  useEffect(() => {
+    fetchExperiences()
+  }, [user])
+
+  // Add new experience
+  const handleAddExperience = async () => {
+    if (!user || !newExperience.title || !newExperience.company || !newExperience.start_date) {
+      console.log("Missing required fields")
+      return
     }
 
-    fetchExperiences()
-  }, [user, supabase])
-
-  // ----------------------------------------------------
-  // Insert a new experience.
-  // We map our local `role_title` to the DB column `role_title`.
-  // If `current` is true, we set `end_date` to null.
-  // ----------------------------------------------------
-  const handleAddExperience = async () => {
-    if (!user) return
-
-    // Ensure required fields are filled
-    if (newExperience.role_title && newExperience.company_name && newExperience.startDate) {
+    try {
       const experienceToInsert = {
         user_id: user.id,
-        role_title: newExperience.role_title,
-        company_name: newExperience.company_name,
-        location: newExperience.location,
-        start_date: newExperience.startDate
-          ? `${newExperience.startDate}-01`
-          : null,
-        end_date: newExperience.current
-          ? null
-          : newExperience.endDate
-            ? `${newExperience.endDate}-01`
-            : null,
+        title: newExperience.title,
+        company: newExperience.company,
+        location: newExperience.location || null,
+        start_date: newExperience.start_date,
+        end_date: newExperience.current ? null : newExperience.end_date || null,
+        current: newExperience.current || false,
         description: newExperience.description || null,
       }
 
       const { data, error } = await supabase
         .from("experiences")
         .insert(experienceToInsert)
-        .select() // Return the inserted row
-        .single()
+        .select()
 
       if (error) {
-        console.error("❌ Error inserting experience:", error.message)
+        console.error("❌ Error adding experience:", error.message)
       } else {
-        setExperiences([
-          ...experiences,
-          {
-            id: data.id,
-            role_title: data.role_title,
-            company_name: data.company_name,
-            location: data.location,
-            startDate: data.start_date ?? "",
-            endDate: data.end_date ?? "",
-            description: data.description,
-            // If end_date is null, treat it as current
-            current: data.end_date == null,
-          },
-        ])
-        // Reset the new experience form
+        // Refresh experiences
+        fetchExperiences()
+        // Reset form
         setNewExperience({ current: false })
+        setIsChecked(false)
         setIsDialogOpen(false)
       }
+    } catch (err) {
+      console.error("❌ Unexpected error adding experience:", err)
     }
   }
 
-  // ----------------------------------------------------
-  // Delete an experience by id.
-  // ----------------------------------------------------
+  // Delete experience
   const handleDeleteExperience = async (id: string) => {
-    const { error } = await supabase.from("experiences").delete().eq("id", id)
+    try {
+      const { error } = await supabase
+        .from("experiences")
+        .delete()
+        .eq("id", id)
 
-    if (error) {
-      console.error("❌ Error deleting experience:", error.message)
-    } else {
-      setExperiences(experiences.filter((exp) => exp.id !== id))
+      if (error) {
+        console.error("❌ Error deleting experience:", error.message)
+      } else {
+        setExperiences(experiences.filter((exp) => exp.id !== id))
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error deleting experience:", err)
     }
   }
 
-  // ----------------------------------------------------
-  // Handle the "I am currently working in this role" checkbox.
-  // If checked, set `endDate` to undefined (so it becomes null in DB).
-  // ----------------------------------------------------
+  // Handle checkbox change
   const handleCheckboxChange = (checked: boolean) => {
     const value = Boolean(checked)
     setIsChecked(value)
     handleInputChange("current", value)
 
     if (value) {
-      handleInputChange("endDate", undefined)
+      handleInputChange("end_date", undefined)
     }
   }
 
-  // ----------------------------------------------------
-  // File upload logic (optional).
-  // ----------------------------------------------------
-  // const handleFileSelect = (file: File) => {
-  //   setNewExperience({
-  //     ...newExperience,
-  //     file,
-  //   })
-  // }
-
-  // ----------------------------------------------------
-  // Generic handler for input changes in newExperience.
-  // ----------------------------------------------------
+  // Handle input changes
   const handleInputChange = <K extends keyof Experience>(
     field: K,
     value: Experience[K]
@@ -197,9 +150,7 @@ export default function ExperienceTab() {
     })
   }
 
-  // ----------------------------------------------------
-  // Month and year arrays for the date dropdowns.
-  // ----------------------------------------------------
+  // Months and years for dropdowns
   const months = [
     "January",
     "February",
@@ -217,15 +168,43 @@ export default function ExperienceTab() {
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i)
 
-  // ----------------------------------------------------
-  // Helper to format a DB date (YYYY-MM) into "Month YYYY".
-  // ----------------------------------------------------
+  // Format date
   const formatDate = (dateString?: string) => {
     if (!dateString) return ""
-    const [year, month] = dateString.split("-")
-    const monthIndex = Number.parseInt(month) - 1
+
+    // Handle already formatted date or YYYY-MM
+    if (dateString.includes(" ")) return dateString
+
+    const parts = dateString.split("-")
+    if (parts.length < 2) return dateString
+
+    const year = parts[0]
+    const monthIndex = parseInt(parts[1]) - 1
+
+    if (isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) return dateString
+
     return `${months[monthIndex]} ${year}`
   }
+
+  // Listen for realtime changes
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel("experiences-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "experiences" },
+        () => {
+          fetchExperiences()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, supabase])
 
   return (
     <Card className="w-full mx-auto">
@@ -248,22 +227,22 @@ export default function ExperienceTab() {
             <div className="grid gap-4 py-4">
               {/* Role Title */}
               <div className="grid gap-2">
-                <Label htmlFor="role_title">Role Title*</Label>
+                <Label htmlFor="title">Role Title*</Label>
                 <Input
-                  id="role_title"
-                  value={newExperience.role_title || ""}
-                  onChange={(e) => handleInputChange("role_title", e.target.value)}
+                  id="title"
+                  value={newExperience.title || ""}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
                   placeholder="e.g. Software Engineer"
                 />
               </div>
 
               {/* Company Name */}
               <div className="grid gap-2">
-                <Label htmlFor="company_name">Company*</Label>
+                <Label htmlFor="company">Company*</Label>
                 <Input
-                  id="company_name"
-                  value={newExperience.company_name || ""}
-                  onChange={(e) => handleInputChange("company_name", e.target.value)}
+                  id="company"
+                  value={newExperience.company || ""}
+                  onChange={(e) => handleInputChange("company", e.target.value)}
                   placeholder="e.g. Tech Solutions Inc."
                 />
               </div>
@@ -287,10 +266,10 @@ export default function ExperienceTab() {
                   <div className="flex flex-col xs:flex-row gap-2">
                     <Select
                       onValueChange={(value) => {
-                        const currentDate = newExperience.startDate?.split("-") || ["", ""]
+                        const currentDate = newExperience.start_date?.split("-") || ["", ""]
                         handleInputChange(
-                          "startDate",
-                          `${currentDate[0] || "0000"}-${value}`
+                          "start_date",
+                          `${currentDate[0] || ""}-${value}`
                         )
                       }}
                     >
@@ -311,10 +290,10 @@ export default function ExperienceTab() {
 
                     <Select
                       onValueChange={(value) => {
-                        const currentDate = newExperience.startDate?.split("-") || ["", ""]
+                        const currentDate = newExperience.start_date?.split("-") || ["", ""]
                         handleInputChange(
-                          "startDate",
-                          `${value}-${currentDate[1] || "00"}`
+                          "start_date",
+                          `${value}-${currentDate[1] || ""}`
                         )
                       }}
                     >
@@ -339,10 +318,10 @@ export default function ExperienceTab() {
                     <div className="flex flex-col xs:flex-row gap-2">
                       <Select
                         onValueChange={(value) => {
-                          const currentDate = newExperience.endDate?.split("-") || ["", ""]
+                          const currentDate = newExperience.end_date?.split("-") || ["", ""]
                           handleInputChange(
-                            "endDate",
-                            `${currentDate[0] || "0000"}-${value}`
+                            "end_date",
+                            `${currentDate[0] || ""}-${value}`
                           )
                         }}
                         disabled={newExperience.current}
@@ -364,10 +343,10 @@ export default function ExperienceTab() {
 
                       <Select
                         onValueChange={(value) => {
-                          const currentDate = newExperience.endDate?.split("-") || ["", ""]
+                          const currentDate = newExperience.end_date?.split("-") || ["", ""]
                           handleInputChange(
-                            "endDate",
-                            `${value}-${currentDate[1] || "00"}`
+                            "end_date",
+                            `${value}-${currentDate[1] || ""}`
                           )
                         }}
                         disabled={newExperience.current}
@@ -414,15 +393,6 @@ export default function ExperienceTab() {
                   className="min-h-[100px]"
                 />
               </div>
-
-              {/* File Upload (optional) */}
-              {/* <div className="grid gap-2">
-                <Label>Upload Supporting Document</Label>
-                <FileUpload
-                  onFileSelect={handleFileSelect}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                />
-              </div> */}
             </div>
 
             {/* Dialog buttons */}
@@ -467,7 +437,7 @@ export default function ExperienceTab() {
                     <div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
                         <h3 className="font-semibold text-lg">
-                          {exp.role_title}
+                          {exp.title}
                         </h3>
                         <Button
                           variant="ghost"
@@ -479,7 +449,7 @@ export default function ExperienceTab() {
                         </Button>
                       </div>
                       <p className="text-gray-600 dark:text-gray-400">
-                        {exp.company_name}
+                        {exp.company}
                       </p>
                       {exp.location && (
                         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -490,8 +460,8 @@ export default function ExperienceTab() {
                       <div className="flex items-center gap-1 mt-2 text-sm text-gray-500 dark:text-gray-400">
                         <Calendar className="w-4 h-4" />
                         <span className="break-words">
-                          {formatDate(exp.startDate)} -{" "}
-                          {exp.current ? "Present" : formatDate(exp.endDate)}
+                          {formatDate(exp.start_date)} -{" "}
+                          {exp.current ? "Present" : formatDate(exp.end_date)}
                         </span>
                       </div>
                       {exp.description && (

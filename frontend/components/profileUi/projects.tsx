@@ -20,13 +20,13 @@ interface Project {
   id: string
   name: string
   type: string
-  startDate: string        // "YYYY-MM" in local state
-  endDate?: string         // "YYYY-MM" in local state
+  start_date: string
+  end_date?: string
   ongoing: boolean
   description?: string
   technologies?: string[]
-  repoUrl?: string
-  demoUrl?: string
+  repo_url?: string
+  demo_url?: string
   // file?: File
 }
 
@@ -63,17 +63,15 @@ export default function ProjectsTab() {
         // Map DB fields to our local Project interface
         const mapped = data.map((proj) => ({
           id: proj.id,
-          name: proj.title,
-          type: proj.subtitle ?? "",
-          // Convert "YYYY-MM-DD" → "YYYY-MM"
-          startDate: proj.start_date ? proj.start_date.slice(0, 7) : "",
-          endDate: proj.end_date ? proj.end_date.slice(0, 7) : "",
-          ongoing: proj.end_date == null, // if end_date is null => ongoing
-          description: proj.description ?? "",
-          technologies: proj.tags ?? [],
-          repoUrl: proj.repo_url ?? "",
-          demoUrl: proj.live_url ?? "",
-          // file: undefined,
+          name: proj.name,
+          type: proj.type,
+          start_date: proj.start_date,
+          end_date: proj.end_date,
+          ongoing: proj.ongoing,
+          description: proj.description,
+          technologies: proj.technologies,
+          repo_url: proj.repo_url,
+          demo_url: proj.demo_url,
         }))
         setProjects(mapped)
       }
@@ -88,29 +86,18 @@ export default function ProjectsTab() {
   const handleAddProject = async () => {
     if (!user) return
 
-    if (newProject.name && newProject.type && newProject.startDate) {
-      // Convert "YYYY-MM" to "YYYY-MM-01" for date columns
-      const startDateForDB = newProject.startDate
-        ? `${newProject.startDate}-01`
-        : null
-
-      let endDateForDB = null
-      if (!newProject.ongoing && newProject.endDate) {
-        endDateForDB = `${newProject.endDate}-01`
-      }
-
-      const tagsForDB = newProject.technologies || []
-
+    if (newProject.name && newProject.type && newProject.start_date) {
       const insertObj = {
         user_id: user.id,
-        title: newProject.name,
-        subtitle: newProject.type,
-        start_date: startDateForDB,
-        end_date: endDateForDB,
+        name: newProject.name,
+        type: newProject.type,
+        start_date: newProject.start_date,
+        end_date: newProject.ongoing ? null : newProject.end_date,
+        ongoing: newProject.ongoing,
         description: newProject.description || null,
-        tags: tagsForDB.length > 0 ? tagsForDB : [],
-        repo_url: newProject.repoUrl || null,
-        live_url: newProject.demoUrl || null,
+        technologies: newProject.technologies || [],
+        repo_url: newProject.repo_url || null,
+        demo_url: newProject.demo_url || null,
       }
 
       const { data, error } = await supabase
@@ -127,16 +114,15 @@ export default function ProjectsTab() {
           ...projects,
           {
             id: data.id,
-            name: data.title,
-            type: data.subtitle ?? "",
-            startDate: data.start_date ? data.start_date.slice(0, 7) : "",
-            endDate: data.end_date ? data.end_date.slice(0, 7) : "",
-            ongoing: data.end_date == null,
-            description: data.description ?? "",
-            technologies: data.tags ?? [],
-            repoUrl: data.repo_url ?? "",
-            demoUrl: data.live_url ?? "",
-            // file: undefined,
+            name: data.name,
+            type: data.type,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            ongoing: data.ongoing,
+            description: data.description,
+            technologies: data.technologies,
+            repo_url: data.repo_url,
+            demo_url: data.demo_url,
           },
         ])
         // Reset form
@@ -168,14 +154,6 @@ export default function ProjectsTab() {
   }
 
   // ----------------------------------------------------------------
-  // File handling (optional)
-  // ----------------------------------------------------------------
-  // const handleFileSelect = (file: File) => {
-  //   setNewProject({ ...newProject, file })
-  //   // If you want to upload to Supabase Storage, do it here
-  // }
-
-  // ----------------------------------------------------------------
   // Checkbox for "ongoing" project
   // ----------------------------------------------------------------
   const handleCheckboxChange = (checked: boolean) => {
@@ -184,7 +162,7 @@ export default function ProjectsTab() {
     handleInputChange("ongoing", value)
 
     if (value) {
-      handleInputChange("endDate", undefined)
+      handleInputChange("end_date", undefined)
     }
   }
 
@@ -236,7 +214,7 @@ export default function ProjectsTab() {
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i)
 
   // ----------------------------------------------------------------
-  // Helper to display "YYYY-MM" as "Month YYYY"
+  // Helper to display date in "Month YYYY" format
   // ----------------------------------------------------------------
   const formatDate = (dateString?: string) => {
     if (!dateString) return ""
@@ -321,8 +299,8 @@ export default function ProjectsTab() {
                   <div className="flex flex-col xs:flex-row gap-2">
                     <Select
                       onValueChange={(value) => {
-                        const currentDate = newProject.startDate?.split("-") || ["", ""]
-                        handleInputChange("startDate", `${currentDate[0]}-${value}`)
+                        const currentDate = newProject.start_date?.split("-") || ["", ""]
+                        handleInputChange("start_date", `${currentDate[0]}-${value}`)
                       }}
                     >
                       <SelectTrigger>
@@ -342,8 +320,8 @@ export default function ProjectsTab() {
 
                     <Select
                       onValueChange={(value) => {
-                        const currentDate = newProject.startDate?.split("-") || ["", ""]
-                        handleInputChange("startDate", `${value}-${currentDate[1]}`)
+                        const currentDate = newProject.start_date?.split("-") || ["", ""]
+                        handleInputChange("start_date", `${value}-${currentDate[1]}`)
                       }}
                     >
                       <SelectTrigger>
@@ -367,8 +345,8 @@ export default function ProjectsTab() {
                     <div className="flex flex-col xs:flex-row gap-2">
                       <Select
                         onValueChange={(value) => {
-                          const currentDate = newProject.endDate?.split("-") || ["", ""]
-                          handleInputChange("endDate", `${currentDate[0]}-${value}`)
+                          const currentDate = newProject.end_date?.split("-") || ["", ""]
+                          handleInputChange("end_date", `${currentDate[0]}-${value}`)
                         }}
                       >
                         <SelectTrigger>
@@ -388,8 +366,8 @@ export default function ProjectsTab() {
 
                       <Select
                         onValueChange={(value) => {
-                          const currentDate = newProject.endDate?.split("-") || ["", ""]
-                          handleInputChange("endDate", `${value}-${currentDate[1]}`)
+                          const currentDate = newProject.end_date?.split("-") || ["", ""]
+                          handleInputChange("end_date", `${value}-${currentDate[1]}`)
                         }}
                       >
                         <SelectTrigger>
@@ -483,8 +461,8 @@ export default function ProjectsTab() {
                 <Label htmlFor="repoUrl">Repository URL</Label>
                 <Input
                   id="repoUrl"
-                  value={newProject.repoUrl || ""}
-                  onChange={(e) => handleInputChange("repoUrl", e.target.value)}
+                  value={newProject.repo_url || ""}
+                  onChange={(e) => handleInputChange("repo_url", e.target.value)}
                   placeholder="e.g. https://github.com/username/project"
                   autoComplete="url"
                 />
@@ -495,8 +473,8 @@ export default function ProjectsTab() {
                 <Label htmlFor="demoUrl">Demo URL</Label>
                 <Input
                   id="demoUrl"
-                  value={newProject.demoUrl || ""}
-                  onChange={(e) => handleInputChange("demoUrl", e.target.value)}
+                  value={newProject.demo_url || ""}
+                  onChange={(e) => handleInputChange("demo_url", e.target.value)}
                   placeholder="e.g. https://project-demo.example.com"
                   autoComplete="url"
                 />
@@ -559,10 +537,10 @@ export default function ProjectsTab() {
                       <div className="flex items-center gap-1 mt-2 text-sm text-gray-500 dark:text-gray-400">
                         <Calendar className="w-4 h-4" />
                         <span className="text-xs xs:text-sm">
-                          {formatDate(project.startDate)} -{" "}
+                          {formatDate(project.start_date)} -{" "}
                           {project.ongoing
                             ? "Present"
-                            : formatDate(project.endDate)}
+                            : formatDate(project.end_date)}
                         </span>
                       </div>
                       {project.description && (
@@ -583,9 +561,9 @@ export default function ProjectsTab() {
                         </div>
                       )}
                       <div className="flex flex-wrap gap-4 mt-3">
-                        {project.repoUrl && (
+                        {project.repo_url && (
                           <a
-                            href={project.repoUrl}
+                            href={project.repo_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-sm"
@@ -594,9 +572,9 @@ export default function ProjectsTab() {
                             <span>Repository</span>
                           </a>
                         )}
-                        {project.demoUrl && (
+                        {project.demo_url && (
                           <a
-                            href={project.demoUrl}
+                            href={project.demo_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-sm"
