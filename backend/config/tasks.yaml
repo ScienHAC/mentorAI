@@ -1,24 +1,20 @@
 analyze_profile:
   description: >
-    Conduct a detailed analysis of the user's career profile, including skills, certifications, and experience.
-    Identify key strengths, weaknesses, and areas for improvement.
+    Analyze student data to determine skills, gaps, and strengths.
   expected_output: >
-    A comprehensive markdown report summarizing the user's profile analysis, highlighting skill gaps and opportunities.
+    JSON summarizing strengths, weaknesses, and areas needing improvement.
   agent: profile_analyzer
 
 create_roadmap:
   description: >
-    Generate a personalized learning roadmap with clear milestones to help the user achieve their career goals.
-    Include curated resources tailored to the user's profile.
+    Generate a detailed semester-wise roadmap tailored to the student's curriculum, skill gaps, and dream companies' requirements.
   expected_output: >
-    A roadmap document with milestones, timelines, and suggested resources for each stage of the learning journey.
+    JSON structured roadmap divided semester-wise, including required extra skills.
   agent: roadmap_creator
 
-career_guidance:
+curate_resources:
   description: >
-    Provide actionable career advice based on the user's profile analysis and learning roadmap.
-    Offer recommendations for certifications, projects, or experiences to enhance their career prospects.
+    Curate recommended resources for each roadmap topic.
   expected_output: >
-    A markdown document containing personalized career advice, recommended next steps, and curated resources.
-  agent: career_advisor
-  output_file: career_guidance.md
+    JSON roadmap enriched with recommended resources (videos, blogs, projects, practice questions).
+  agent: resource_curator
