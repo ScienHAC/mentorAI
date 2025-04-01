@@ -257,26 +257,89 @@ export default function EducationTab() {
                 />
               </div>
 
-              {/* Start Date */}
-              <div className="grid gap-2">
-                <Label htmlFor="startDate">Start Date*</Label>
-                <Input
-                  id="startDate"
-                  value={newEducation.startDate || ""}
-                  onChange={(e) => handleInputChange("startDate", e.target.value)}
-                  placeholder="e.g. September 2020"
-                />
-              </div>
+              {/* Start Date and End Date with month/year dropdowns */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Start Date*</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      onValueChange={(value) => {
+                        const currentDate = newEducation.startDate?.split("-") || ["", ""]
+                        handleInputChange("startDate", `${currentDate[0]}-${value}`)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map((month, index) => (
+                          <SelectItem key={month} value={(index + 1).toString().padStart(2, "0")}>
+                            {month}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-              {/* End Date */}
-              <div className="grid gap-2">
-                <Label htmlFor="endDate">End Date (or Expected)</Label>
-                <Input
-                  id="endDate"
-                  value={newEducation.endDate || ""}
-                  onChange={(e) => handleInputChange("endDate", e.target.value)}
-                  placeholder="e.g. June 2024"
-                />
+                    <Select
+                      onValueChange={(value) => {
+                        const currentDate = newEducation.startDate?.split("-") || ["", ""]
+                        handleInputChange("startDate", `${value}-${currentDate[1]}`)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>End Date (or Expected)</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      onValueChange={(value) => {
+                        const currentDate = newEducation.endDate?.split("-") || ["", ""]
+                        handleInputChange("endDate", `${currentDate[0]}-${value}`)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map((month, index) => (
+                          <SelectItem key={month} value={(index + 1).toString().padStart(2, "0")}>
+                            {month}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      onValueChange={(value) => {
+                        const currentDate = newEducation.endDate?.split("-") || ["", ""]
+                        handleInputChange("endDate", `${value}-${currentDate[1]}`)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               {/* Grade */}

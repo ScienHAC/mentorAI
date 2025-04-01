@@ -69,7 +69,7 @@ export default function ExperienceTab() {
 
   useEffect(() => {
     fetchExperiences()
-  }, [user])
+  }, [user, fetchExperiences])
 
   // Add new experience
   const handleAddExperience = async () => {
@@ -90,7 +90,7 @@ export default function ExperienceTab() {
         description: newExperience.description || null,
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("experiences")
         .insert(experienceToInsert)
         .select()
@@ -204,7 +204,7 @@ export default function ExperienceTab() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, supabase])
+  }, [user, supabase, fetchExperiences])
 
   return (
     <Card className="w-full mx-auto">
