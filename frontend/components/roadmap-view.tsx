@@ -13,6 +13,8 @@ import type { Company } from "@/types"
 interface RoadmapViewProps {
   selectedCompanyIds: string[]
   companies: Company[]
+  activeTab: string
+  setActiveTab: (tab: string) => void
 }
 
 interface Milestone {
@@ -27,9 +29,13 @@ interface Milestone {
   }[]
 }
 
-export default function RoadmapView({ selectedCompanyIds, companies }: RoadmapViewProps) {
+export default function RoadmapView({
+  selectedCompanyIds,
+  companies,
+  activeTab,
+  setActiveTab
+}: RoadmapViewProps) {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("roadmap")
   const [roadmapLoading, setRoadmapLoading] = useState(true)
   const [milestones, setMilestones] = useState<Milestone[]>([])
 
@@ -200,7 +206,7 @@ export default function RoadmapView({ selectedCompanyIds, companies }: RoadmapVi
         </div>
       </div>
 
-      <Tabs defaultValue="roadmap" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="companies">Selected Companies</TabsTrigger>
@@ -239,8 +245,8 @@ export default function RoadmapView({ selectedCompanyIds, companies }: RoadmapVi
                         <button
                           onClick={() => toggleMilestoneCompletion(milestone.id)}
                           className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${milestone.completed
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-500"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-500"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-400"
                             }`}
                         >
                           {milestone.completed ? <CheckCircle className="h-8 w-8" /> : <Circle className="h-8 w-8" />}
@@ -249,8 +255,8 @@ export default function RoadmapView({ selectedCompanyIds, companies }: RoadmapVi
 
                       <Card
                         className={`flex-1 transition-colors ${milestone.completed
-                            ? "border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/10"
-                            : ""
+                          ? "border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/10"
+                          : ""
                           }`}
                       >
                         <CardHeader className="pb-2">

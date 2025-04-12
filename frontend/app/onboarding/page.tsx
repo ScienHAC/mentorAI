@@ -158,7 +158,7 @@ export default function Onboarding() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <div className="w-full max-w-3xl bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Let's Get Started</h1>
+          <h1 className="text-2xl font-bold">Let&apos;s Get Started</h1>
           <div className="flex space-x-2">
             {[0, 1, 2, 3, 4].map((i) => (
               <div
@@ -189,7 +189,7 @@ export default function Onboarding() {
 
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">What's your name?</Label>
+                    <Label htmlFor="name">What&apos;s your name?</Label>
                     <Input
                       id="name"
                       placeholder="Enter your name"
@@ -212,7 +212,7 @@ export default function Onboarding() {
 
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="careerGoal">What's your career goal?</Label>
+                    <Label htmlFor="careerGoal">What&apos;s your career goal?</Label>
                     <Textarea
                       id="careerGoal"
                       placeholder="e.g., I want to become a senior software engineer at a FAANG company within 2 years"
@@ -245,7 +245,7 @@ export default function Onboarding() {
                       <Label htmlFor="beginner" className="flex-1 cursor-pointer">
                         <div className="font-medium">Beginner</div>
                         <div className="text-sm text-slate-500 dark:text-slate-400">
-                          I'm just starting out or have less than 1 year of experience
+                          I&apos;m just starting out or have less than 1 year of experience
                         </div>
                       </Label>
                     </div>
@@ -283,7 +283,7 @@ export default function Onboarding() {
 
                 <div className="space-y-4">
                   <p className="text-slate-600 dark:text-slate-300">
-                    Select the domains you're interested in (select at least one)
+                    Select the domains you&apos;re interested in (select at least one)
                   </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,9 +323,9 @@ export default function Onboarding() {
                   <div className="mx-auto bg-green-100 dark:bg-green-900 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-6">
                     <CheckCircle className="h-10 w-10 text-green-500" />
                   </div>
-                  <h2 className="text-2xl font-bold mb-2">You're all set!</h2>
+                  <h2 className="text-2xl font-bold mb-2">You&apos;re all set!</h2>
                   <p className="text-slate-600 dark:text-slate-300 max-w-md">
-                    We've gathered all the information we need to create your personalized career roadmap.
+                    We&apos;ve gathered all the information we need to create your personalized career roadmap.
                   </p>
                 </div>
 
