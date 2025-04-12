@@ -82,7 +82,7 @@ export default function Roadmap() {
     if (user) {
       fetchCompanies()
     }
-  }, [user, toast])
+  }, [user, toast, supabase])
 
   useEffect(() => {
     let result = companies
@@ -347,7 +347,9 @@ export default function Roadmap() {
           <TabsContent value="roadmap">
             <RoadmapView
               selectedCompanyIds={selectedCompanies}
-              companies={companies.filter((company) => selectedCompanies.includes(company.id))}
+              companies={companies.filter(c => selectedCompanies.includes(c.id))}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
             />
           </TabsContent>
         </Tabs>
