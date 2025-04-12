@@ -76,10 +76,24 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session) {
-        if (isAuthRoute) {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (isAuthRoute && user) {  // Add check if user exists
+            // Check if user_metadata exists before accessing it
+            const isOnboarded = user.user_metadata?.onboarded;
+
+            if (!isOnboarded && requestUrl.pathname !== "/onboarding") {
+                return NextResponse.redirect(new URL("/onboarding", request.url));
+            }
+
+            if (isOnboarded && requestUrl.pathname === "/onboarding") {
+                return NextResponse.redirect(new URL(redirectAfterLogin, request.url));
+            }
+
             if (requestUrl.pathname === redirectAfterLogin) {
                 return response;
             }
+
             return NextResponse.redirect(new URL(redirectAfterLogin, request.url));
         }
     }

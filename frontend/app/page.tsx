@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Cookies from "js-cookie";
 import { motion } from "framer-motion"
-import { ChevronRight, ExternalLink } from "lucide-react"
+import { ChevronRight, ExternalLink, Code, Database, LineChart, Shield } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -250,6 +250,86 @@ export default function HOME() {
               </motion.div>
             )}
           </section>
+
+          <motion.div
+            className="mt-24 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+          >
+            {[
+              {
+                icon: <Code className="h-10 w-10 text-purple-500" />,
+                title: "Software Engineering",
+                description: "Master coding skills needed for top tech companies",
+              },
+              {
+                icon: <Database className="h-10 w-10 text-blue-500" />,
+                title: "Data Science",
+                description: "Learn analytics and machine learning fundamentals",
+              },
+              {
+                icon: <Shield className="h-10 w-10 text-green-500" />,
+                title: "Cybersecurity",
+                description: "Develop skills to protect digital assets",
+              },
+              {
+                icon: <LineChart className="h-10 w-10 text-orange-500" />,
+                title: "Product Management",
+                description: "Build, launch and scale successful products",
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700"
+                whileHover={{
+                  y: -5,
+                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <div className="mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+                <p className="text-slate-600 dark:text-slate-300">{feature.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            className="mt-24 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
+            <h2 className="text-3xl font-bold mb-8 text-center">How It Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                {
+                  step: "1",
+                  title: "Share Your Goals",
+                  description: "Tell us about your experience and career aspirations",
+                },
+                {
+                  step: "2",
+                  title: "Select Target Companies",
+                  description: "Choose from our database of top tech companies",
+                },
+                {
+                  step: "3",
+                  title: "Follow Your Roadmap",
+                  description: "Get a personalized learning path to achieve your goals",
+                },
+              ].map((step, index) => (
+                <div key={index} className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 flex items-center justify-center text-white font-bold text-xl mb-4">
+                    {step.step}
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{step.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-300">{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
 
           <section className="py-20 text-center">
             <h3 className="text-3xl font-bold mb-6">Ready to Launch Your Tech Career?</h3>
