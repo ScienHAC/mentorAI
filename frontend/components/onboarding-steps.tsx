@@ -82,7 +82,7 @@ export default function OnboardingSteps() {
         transition={{ delay: 0.8 }}
       >
         <h3 className="text-2xl font-bold mb-4">Ready to Launch Your Tech Career?</h3>
-        <p className="text-lg mb-0">With MentorAI by your side, you're on the path to success!</p>
+        <p className="text-lg mb-0">With MentorAI by your side, you&apos;re on the path to success!</p>
       </motion.div>
     </div>
   )
