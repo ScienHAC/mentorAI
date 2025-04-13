@@ -11,6 +11,8 @@ import Header from "@/components/header"
 import Chatbot from "@/components/Chatbot"
 import AnimatedCompanyLogos from "@/components/AnimatedCompanyLogos"
 import BackgroundAnimation from "@/components/BackgroundAnimation"
+import AnimatedChevron from "@/components/animated-chevron"
+import OnboardingSteps from "@/components/onboarding-steps"
 
 const techDomains = [
   {
@@ -330,6 +332,16 @@ export default function HOME() {
               ))}
             </div>
           </motion.div>
+
+          {/* How It Works Section */}
+          <section className="text-center py-12">
+            <h2 className="text-3xl font-semibold mb-6">How It Works</h2>
+            <p className="text-gray-600 mb-8">Learn how our app can help you achieve your goals.</p>
+            <AnimatedChevron />
+          </section>
+
+          {/* Detailed Onboarding Process */}
+          <OnboardingSteps />
 
           <section className="py-20 text-center">
             <h3 className="text-3xl font-bold mb-6">Ready to Launch Your Tech Career?</h3>
