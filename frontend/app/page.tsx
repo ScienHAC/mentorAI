@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Cookies from "js-cookie";
 import { motion } from "framer-motion"
-import { ChevronRight, ExternalLink, Code, Database, LineChart, Shield } from "lucide-react"
+import { ChevronRight, ExternalLink, Code, Database, LineChart, Shield, Sparkles, Github } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,8 @@ import AnimatedCompanyLogos from "@/components/AnimatedCompanyLogos"
 import BackgroundAnimation from "@/components/BackgroundAnimation"
 import AnimatedChevron from "@/components/animated-chevron"
 import OnboardingSteps from "@/components/onboarding-steps"
+import AnimatedFuelChevron from "@/components/animated-fuel-chevron"
+import MentorAIChatbot from "@/components/mentor-ai-chatbot";
 
 const techDomains = [
   {
@@ -120,7 +122,11 @@ export default function HOME() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Shape Your Future in Tech
+              Shape Your Future with{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500 inline-flex items-center">
+                MentorAI
+                <Sparkles className="h-5 w-5 ml-1 text-purple-500" />
+              </span>
             </motion.h2>
             <motion.p
               className="text-xl text-muted-foreground mb-8"
@@ -128,7 +134,7 @@ export default function HOME() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Guiding college students to land their dream jobs in top tech companies
+              AI-powered guidance to help college students land their dream jobs in top tech companies
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -297,42 +303,6 @@ export default function HOME() {
             ))}
           </motion.div>
 
-          <motion.div
-            className="mt-24 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            <h2 className="text-3xl font-bold mb-8 text-center">How It Works</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  step: "1",
-                  title: "Share Your Goals",
-                  description: "Tell us about your experience and career aspirations",
-                },
-                {
-                  step: "2",
-                  title: "Select Target Companies",
-                  description: "Choose from our database of top tech companies",
-                },
-                {
-                  step: "3",
-                  title: "Follow Your Roadmap",
-                  description: "Get a personalized learning path to achieve your goals",
-                },
-              ].map((step, index) => (
-                <div key={index} className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 flex items-center justify-center text-white font-bold text-xl mb-4">
-                    {step.step}
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-                  <p className="text-slate-600 dark:text-slate-300">{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
           {/* How It Works Section */}
           <section className="text-center py-12">
             <h2 className="text-3xl font-semibold mb-6">How It Works</h2>
@@ -343,15 +313,30 @@ export default function HOME() {
           {/* Detailed Onboarding Process */}
           <OnboardingSteps />
 
+          <MentorAIChatbot />
+
           <section className="py-20 text-center">
             <h3 className="text-3xl font-bold mb-6">Ready to Launch Your Tech Career?</h3>
             <p className="text-xl text-muted-foreground mb-8">
               Join logikxmind today and take the first step towards your dream job
             </p>
-            <Button size="lg">
-              Start Your Journey
-              <ChevronRight className="ml-2 h-4 w-4" />
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white px-8 py-6 text-lg"
+            >
+              <Github className="mr-2 h-5 w-5" />
+              Sign in with GitHub
             </Button>
+
+            {/* Animated Chevron */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1, duration: 0.5 }}
+              className="mt-16"
+            >
+              <AnimatedFuelChevron />
+            </motion.div>
           </section>
         </main>
         <Chatbot />
