@@ -13,7 +13,7 @@ const AuthCallback = () => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                router.push("/profile");
+                router.push("/onboarding");
             } else {
                 router.push("/login");
             }
