@@ -45,7 +45,7 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
     <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/dashboard" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <h1 className={`text-xl md:text-2xl font-bold lowercase ${spaceMono.className}`}>logikxmind</h1>
           </Link>
         </div>

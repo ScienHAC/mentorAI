@@ -41,7 +41,9 @@ const Header = () => {
 
     return (
         <header className="container mx-auto px-4 py-4 md:py-6 flex justify-between items-center">
-            <h1 className={`text-xl md:text-2xl font-bold lowercase ${spaceMono.className}`}>logikxmind</h1>
+            <Link href="/" className="flex items-center space-x-2">
+                <h1 className={`text-xl md:text-2xl font-bold lowercase ${spaceMono.className}`}>logikxmind</h1>
+            </Link>
 
             {/* Desktop Navigation */}
             {/* <nav className="hidden md:flex space-x-4">
